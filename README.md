@@ -32,6 +32,17 @@ También puedes ejecutar todas las secciones en secuencia:
 python main.py
 ```
 
+## Notebooks en Google Colab
+
+En la carpeta `notebooks/` encontrarás versiones en Jupyter de cada módulo, listas para ejecutarse en Google Colab:
+
+- `01_basics.ipynb`
+- `02_color_spaces.ipynb`
+- `03_histograms.ipynb`
+- `04_spatial_filtering.ipynb`
+- `05_edge_detection.ipynb`
+- `06_morphology.ipynb`
+
 ## Contenido
 
 - `image_processing/basics.py`: operaciones básicas de manipulación.
