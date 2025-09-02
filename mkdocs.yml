@@ -1,0 +1,10 @@
+site_name: VisComp Tutorial
+nav:
+  - Inicio: index.md
+  - Secciones:
+      - Operaciones básicas: basics.md
+      - Espacios de color: color_spaces.md
+      - Histogramas: histograms.md
+      - Filtrado espacial: spatial_filtering.md
+      - Detección de bordes: edge_detection.md
+      - Morfología: morphology.md
