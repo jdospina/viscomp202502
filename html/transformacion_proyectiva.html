@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformación Proyectiva - Coordenadas Homogéneas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .visualization-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+        }
+        
+        .canvas-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        canvas {
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            background: #f8f9fa;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: crosshair;
+        }
+        
+        .controls {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        
+        .value-display {
+            min-width: 60px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .info-panel {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .matrix-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .matrix {
+            display: inline-block;
+            border-left: 2px solid #333;
+            border-right: 2px solid #333;
+            padding: 10px 20px;
+            margin: 10px;
+        }
+        
+        .matrix-row {
+            display: block;
+            margin: 5px 0;
+        }
+        
+        .reset-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Transformación Proyectiva con Coordenadas Homogéneas</h1>
+        
+        <div class="info-panel">
+            <h3>💡 Cómo usar esta demostración:</h3>
+            <p><strong>Arrastra los controles</strong> para modificar los parámetros de la matriz de homografía y observa cómo se transforma el cuadrilátero en tiempo real. Haz <strong>click en cualquier canvas</strong> para agregar puntos de prueba.</p>
+        </div>
+        
+        <div class="controls">
+            <h3>🎛️ Controles de la Matriz de Homografía</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div class="control-group">
+                    <label>Escalado X (h₁₁):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h11" min="0.1" max="2" step="0.1" value="1">
+                        <span class="value-display" id="h11-value">1.0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Inclinación XY (h₁₂):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h12" min="-0.5" max="0.5" step="0.05" value="0">
+                        <span class="value-display" id="h12-value">0.0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Traslación X (h₁₃):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h13" min="-100" max="100" step="5" value="0">
+                        <span class="value-display" id="h13-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Inclinación YX (h₂₁):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h21" min="-0.5" max="0.5" step="0.05" value="0">
+                        <span class="value-display" id="h21-value">0.0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Escalado Y (h₂₂):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h22" min="0.1" max="2" step="0.1" value="1">
+                        <span class="value-display" id="h22-value">1.0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Traslación Y (h₂₃):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h23" min="-100" max="100" step="5" value="0">
+                        <span class="value-display" id="h23-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Perspectiva X (h₃₁):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h31" min="-0.003" max="0.003" step="0.0001" value="0">
+                        <span class="value-display" id="h31-value">0.0000</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Perspectiva Y (h₃₂):</label>
+                    <div class="slider-container">
+                        <input type="range" id="h32" min="-0.003" max="0.003" step="0.0001" value="0">
+                        <span class="value-display" id="h32-value">0.0000</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <button class="reset-btn" onclick="resetTransformation()">🔄 Resetear</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="visualization-container">
+            <div class="canvas-container">
+                <div class="canvas-title">📐 Imagen Original</div>
+                <canvas id="originalCanvas" width="400" height="300"></canvas>
+            </div>
+            
+            <div class="canvas-container">
+                <div class="canvas-title">🎯 Imagen Transformada</div>
+                <canvas id="transformedCanvas" width="400" height="300"></canvas>
+            </div>
+        </div>
+        
+        <div class="matrix-display">
+            <h3>📊 Matriz de Homografía Actual</h3>
+            <div class="matrix" id="matrixDisplay">
+                <div class="matrix-row">[ 1.000  0.000   0 ]</div>
+                <div class="matrix-row">[ 0.000  1.000   0 ]</div>
+                <div class="matrix-row">[ 0.0000 0.0000  1 ]</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let homographyMatrix = [
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]
+        ];
+        
+        let testPoints = [];
+        
+        // Canvas y contextos
+        const originalCanvas = document.getElementById('originalCanvas');
+        const transformedCanvas = document.getElementById('transformedCanvas');
+        const originalCtx = originalCanvas.getContext('2d');
+        const transformedCtx = transformedCanvas.getContext('2d');
+        
+        // Puntos del cuadrilátero original (documento)
+        const originalQuad = [
+            {x: 80, y: 50},   // superior izquierda
+            {x: 320, y: 60},  // superior derecha  
+            {x: 310, y: 220}, // inferior derecha
+            {x: 90, y: 210}   // inferior izquierda
+        ];
+        
+        // Función para aplicar transformación homográfica
+        function applyHomography(point, H) {
+            const x = point.x;
+            const y = point.y;
+            
+            const xp_h = H[0][0]*x + H[0][1]*y + H[0][2];
+            const yp_h = H[1][0]*x + H[1][1]*y + H[1][2];
+            const w = H[2][0]*x + H[2][1]*y + H[2][2];
+            
+            return {
+                x: xp_h / w,
+                y: yp_h / w,
+                w: w
+            };
+        }
+        
+        // Función para dibujar cuadrilátero
+        function drawQuadrilateral(ctx, points, color = '#3498db', fill = false) {
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+            
+            if (fill) {
+                ctx.fillStyle = color + '40';
+                ctx.fill();
+            }
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Dibujar vértices
+            points.forEach((point, index) => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // Etiquetas de vértices
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '12px Arial';
+                ctx.fillText(`P${index + 1}`, point.x + 10, point.y - 10);
+            });
+        }
+        
+        // Función para dibujar puntos de prueba
+        function drawTestPoints(ctx, points, color = '#e74c3c') {
+            points.forEach((point, index) => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = '10px Arial';
+                ctx.fillText(`T${index + 1}`, point.x + 8, point.y - 8);
+            });
+        }
+        
+        // Función para dibujar grid de referencia
+        function drawGrid(ctx, width, height) {
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x <= width; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= height; y += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+        }
+        
+        // Función principal de dibujo
+        function draw() {
+            // Limpiar canvas
+            originalCtx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+            transformedCtx.clearRect(0, 0, transformedCanvas.width, transformedCanvas.height);
+            
+            // Dibujar grids
+            drawGrid(originalCtx, originalCanvas.width, originalCanvas.height);
+            drawGrid(transformedCtx, transformedCanvas.width, transformedCanvas.height);
+            
+            // Dibujar cuadrilátero original
+            drawQuadrilateral(originalCtx, originalQuad, '#3498db', true);
+            
+            // Transformar y dibujar cuadrilátero
+            const transformedQuad = originalQuad.map(point => 
+                applyHomography(point, homographyMatrix)
+            );
+            drawQuadrilateral(transformedCtx, transformedQuad, '#27ae60', true);
+            
+            // Dibujar puntos de prueba originales
+            drawTestPoints(originalCtx, testPoints, '#e74c3c');
+            
+            // Transformar y dibujar puntos de prueba
+            const transformedTestPoints = testPoints.map(point => 
+                applyHomography(point, homographyMatrix)
+            );
+            drawTestPoints(transformedCtx, transformedTestPoints, '#e74c3c');
+            
+            // Mostrar información adicional
+            drawInfo();
+        }
+        
+        // Función para mostrar información
+        function drawInfo() {
+            originalCtx.fillStyle = '#2c3e50';
+            originalCtx.font = '14px Arial';
+            originalCtx.fillText('Haz click para agregar puntos de prueba', 10, 280);
+            
+            transformedCtx.fillStyle = '#2c3e50';
+            transformedCtx.font = '14px Arial';
+            transformedCtx.fillText('Resultado de la transformación', 10, 280);
+        }
+        
+        // Función para actualizar la matriz
+        function updateMatrix() {
+            homographyMatrix = [
+                [parseFloat(document.getElementById('h11').value), 
+                 parseFloat(document.getElementById('h12').value), 
+                 parseFloat(document.getElementById('h13').value)],
+                [parseFloat(document.getElementById('h21').value), 
+                 parseFloat(document.getElementById('h22').value), 
+                 parseFloat(document.getElementById('h23').value)],
+                [parseFloat(document.getElementById('h31').value), 
+                 parseFloat(document.getElementById('h32').value), 
+                 1]
+            ];
+            
+            // Actualizar display de la matriz
+            const matrixDisplay = document.getElementById('matrixDisplay');
+            matrixDisplay.innerHTML = `
+                <div class="matrix-row">[ ${homographyMatrix[0][0].toFixed(3)}  ${homographyMatrix[0][1].toFixed(3)}  ${homographyMatrix[0][2].toFixed(0)} ]</div>
+                <div class="matrix-row">[ ${homographyMatrix[1][0].toFixed(3)}  ${homographyMatrix[1][1].toFixed(3)}  ${homographyMatrix[1][2].toFixed(0)} ]</div>
+                <div class="matrix-row">[ ${homographyMatrix[2][0].toFixed(4)} ${homographyMatrix[2][1].toFixed(4)}  ${homographyMatrix[2][2]} ]</div>
+            `;
+            
+            draw();
+        }
+        
+        // Función para resetear la transformación
+        function resetTransformation() {
+            document.getElementById('h11').value = 1;
+            document.getElementById('h12').value = 0;
+            document.getElementById('h13').value = 0;
+            document.getElementById('h21').value = 0;
+            document.getElementById('h22').value = 1;
+            document.getElementById('h23').value = 0;
+            document.getElementById('h31').value = 0;
+            document.getElementById('h32').value = 0;
+            
+            testPoints = [];
+            updateSliderValues();
+            updateMatrix();
+        }
+        
+        // Función para actualizar valores mostrados
+        function updateSliderValues() {
+            ['h11', 'h12', 'h13', 'h21', 'h22', 'h23', 'h31', 'h32'].forEach(id => {
+                const slider = document.getElementById(id);
+                const valueDisplay = document.getElementById(id + '-value');
+                if (id.includes('h3')) {
+                    valueDisplay.textContent = parseFloat(slider.value).toFixed(4);
+                } else if (id.includes('h1') && (id.endsWith('3'))) {
+                    valueDisplay.textContent = parseInt(slider.value);
+                } else if (id.includes('h2') && (id.endsWith('3'))) {
+                    valueDisplay.textContent = parseInt(slider.value);
+                } else {
+                    valueDisplay.textContent = parseFloat(slider.value).toFixed(1);
+                }
+            });
+        }
+        
+        // Event listeners para sliders
+        ['h11', 'h12', 'h13', 'h21', 'h22', 'h23', 'h31', 'h32'].forEach(id => {
+            const slider = document.getElementById(id);
+            slider.addEventListener('input', () => {
+                updateSliderValues();
+                updateMatrix();
+            });
+        });
+        
+        // Event listeners para clicks en canvas
+        originalCanvas.addEventListener('click', (e) => {
+            const rect = originalCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            testPoints.push({x, y});
+            draw();
+        });
+        
+        transformedCanvas.addEventListener('click', (e) => {
+            testPoints = []; // Limpiar puntos al hacer click en el canvas transformado
+            draw();
+        });
+        
+        // Inicialización
+        updateSliderValues();
+        updateMatrix();
+        draw();
+    </script>
+</body>
+</html>
